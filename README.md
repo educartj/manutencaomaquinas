@@ -91,6 +91,17 @@ body{
   transform:translateY(-3px) scale(1.02);
 }
 
+.chart-container{
+  position:relative;
+  height:320px;
+  max-height:320px;
+  width:100%;
+}
+
+.chart-container canvas{
+  max-height:320px !important;
+}
+
 /* TABLE */
 .table-line{
   transition:0.2s;
@@ -98,6 +109,49 @@ body{
 
 .table-line:hover{
   background:rgba(255,255,255,0.05);
+}
+
+#tableWrapper{
+  background:#020617;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:24px;
+  overflow:hidden;
+}
+
+#tableHead{
+  background:#0f172a;
+}
+
+#tableHead th{
+  color:#cbd5e1;
+  font-weight:700;
+}
+
+#tableBody{
+  background:#020617;
+}
+
+#tableBody td{
+  background:#020617;
+  color:#e2e8f0;
+}
+
+#tableBody tr:nth-child(even) td{
+  background:#071226;
+}
+
+#tableBody tr:hover td{
+  background:#0f172a;
+}
+
+.filter-select{
+  background:#020617;
+  border:1px solid rgba(255,255,255,0.12);
+  color:white;
+  padding:16px 20px;
+  border-radius:18px;
+  outline:none;
+  min-width:220px;
 }
 
 /* BADGE */
@@ -350,7 +404,9 @@ body{
       Status dos Equipamentos
     </h2>
 
-    <canvas id="statusChart"></canvas>
+    <div class="chart-container">
+      <canvas id="statusChart"></canvas>
+    </div>
 
   </div>
 
@@ -360,7 +416,9 @@ body{
       Quantidade por Disciplina
     </h2>
 
-    <canvas id="disciplinaChart"></canvas>
+    <div class="chart-container">
+      <canvas id="disciplinaChart"></canvas>
+    </div>
 
   </div>
 
@@ -462,16 +520,34 @@ body{
 
     </div>
 
-    <input
-      type="text"
-      id="search"
-      placeholder="Pesquisar..."
-      class="bg-slate-900 border border-slate-700 px-6 py-4 rounded-2xl outline-none xl:w-80"
-    />
+    <div class="flex flex-col md:flex-row gap-4">
+
+      <!-- FILTRO DISCIPLINA -->
+      <select
+        id="disciplinaFilter"
+        class="filter-select"
+      >
+        <option value="">
+          Todas Disciplinas
+        </option>
+      </select>
+
+      <!-- PESQUISA -->
+      <input
+        type="text"
+        id="search"
+        placeholder="Pesquisar..."
+        class="bg-slate-950 border border-slate-700 px-6 py-4 rounded-2xl outline-none xl:w-80 text-white"
+      />
+
+    </div>
 
   </div>
 
-  <div class="overflow-auto rounded-2xl">
+  <div
+    id="tableWrapper"
+    class="overflow-auto rounded-2xl"
+  >
 
     <table class="w-full text-sm">
 
@@ -496,9 +572,7 @@ body{
         onclick="prevPage()"
         class="pagination-btn bg-slate-800 hover:bg-slate-700 px-5 py-3 rounded-2xl"
       >
-
         <i class="fa-solid fa-arrow-left"></i>
-
       </button>
 
       <div
@@ -512,9 +586,7 @@ body{
         onclick="nextPage()"
         class="pagination-btn bg-cyan-500 hover:bg-cyan-600 px-5 py-3 rounded-2xl"
       >
-
         <i class="fa-solid fa-arrow-right"></i>
-
       </button>
 
     </div>
@@ -640,7 +712,7 @@ function processData(data){
   renderCharts(statusCount,disciplinaCount);
 
   renderDisciplinas(disciplinaCount);
-
+  populateDisciplinaFilter(disciplinaCount);
   generateCronograma(disciplinaCount);
 
 }
@@ -1009,7 +1081,30 @@ function generateCronograma(disciplinas){
   }
 
 }
+function populateDisciplinaFilter(data){
 
+  const select =
+    document.getElementById('disciplinaFilter');
+
+  select.innerHTML = `
+    <option value="">
+      Todas Disciplinas
+    </option>
+  `;
+
+  Object.keys(data)
+  .sort()
+  .forEach(disciplina=>{
+
+    select.innerHTML += `
+      <option value="${disciplina}">
+        ${disciplina}
+      </option>
+    `;
+
+  });
+
+}
 function renderTable(data){
 
   const tableHead =
@@ -1023,14 +1118,22 @@ function renderTable(data){
 
   if(data.length === 0) return;
 
-  const cols = Object.keys(data[0]);
+  // =========================================
+  // MOSTRAR APENAS ESTAS COLUNAS
+  // =========================================
+
+  const columns = [
+    'RM',
+    'Nome do Equipamento (Masterplan)',
+    'Disciplina'
+  ];
 
   let head = '<tr>';
 
-  cols.forEach(col=>{
+  columns.forEach(col=>{
 
     head += `
-      <th class="text-left p-5 border-b border-slate-700 text-slate-300 whitespace-nowrap">
+      <th class="text-left p-5 border-b border-slate-800 whitespace-nowrap">
         ${col}
       </th>
     `;
@@ -1067,15 +1170,23 @@ function updateTablePage(){
       <tr class="table-line">
     `;
 
-    Object.values(row).forEach(value=>{
+    tr += `
+      <td class="p-5 border-b border-slate-800 whitespace-nowrap">
+        ${row['RM'] || ''}
+      </td>
+    `;
 
-      tr += `
-        <td class="p-5 border-b border-slate-800 whitespace-nowrap">
-          ${value || ''}
-        </td>
-      `;
+    tr += `
+      <td class="p-5 border-b border-slate-800 whitespace-nowrap">
+        ${row['Nome do Equipamento (Masterplan)'] || ''}
+      </td>
+    `;
 
-    });
+    tr += `
+      <td class="p-5 border-b border-slate-800 whitespace-nowrap">
+        ${row['Disciplina'] || ''}
+      </td>
+    `;
 
     tr += '</tr>';
 
@@ -1140,37 +1251,35 @@ document
   renderTable(filteredData);
 
 });
+document
+.getElementById('disciplinaFilter')
+.addEventListener('change',function(){
 
-function exportExcel(){
+  const disciplina =
+    this.value.toLowerCase();
 
-  if(filteredData.length === 0){
+  if(!disciplina){
 
-    alert('Nenhum dado carregado.');
+    filteredData = originalData;
 
-    return;
+  }else{
+
+    filteredData =
+      originalData.filter(row=>
+
+        (row['Disciplina'] || '')
+        .toLowerCase()
+        .includes(disciplina)
+
+      );
 
   }
 
-  const worksheet =
-    XLSX.utils.json_to_sheet(filteredData);
+  currentPage = 1;
 
-  const workbook =
-    XLSX.utils.book_new();
+  renderTable(filteredData);
 
-  XLSX.utils.book_append_sheet(
-    workbook,
-    worksheet,
-    'Dashboard'
-  );
-
-  XLSX.writeFile(
-    workbook,
-    'dashboard_maquinas.xlsx'
-  );
-
-}
-
+});
 </script>
 
 </body>
-
